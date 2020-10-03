@@ -1,0 +1,22 @@
+{
+  "name": "reorder_spotify_playlist",
+  "version": "1.0.0",
+  "main": "index.js",
+  "author": "lucasmedeiros <lucasmed812@gmail.com>",
+  "license": "MIT",
+  "scripts": {
+    "start": "node ./index.js",
+    "dev": "nodemon ./index.js"
+  },
+  "dependencies": {
+    "axios": "^0.20.0",
+    "body-parser": "^1.19.0",
+    "cors": "^2.8.5",
+    "dotenv": "^8.2.0",
+    "express": "^4.17.1",
+    "query-string": "^6.13.2"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.4"
+  }
+}
