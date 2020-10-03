@@ -47,7 +47,7 @@ app.get('/', async (_req, res) => {
     scope: ['playlist-read-collaborative', 'playlist-modify-public', 'playlist-modify-private'],
     redirect_uri: REDIRECT_URI,
   }
-  const query = querystring.stringify(queryObject, { arrayFormat: 'comma' });
+  const query = querystring.stringify(queryObject, { arrayFormat: 'comma' })
   res.status(200).json({
     url: `${SPOTIFY_ACCOUNT_API_PREFIX}/authorize?${query}`
   })
@@ -166,8 +166,34 @@ function getPlaylistTracksGroupedByUser(playlistDetails) {
   }, {})
 }
 
-async function reorderColaborativePlaylist(playlistDetails, tracksGroupedByUser) {
-  // TODO: reorder
+async function reorderColaborativePlaylist(playlistId, numberOfTracks, tracksGroupedByUser) {
+  const users = Object.keys(tracksGroupedByUser)
+  for (let i = 0; i < (numberOfTracks / users.length); i++) {
+    for (let user of users) {
+      const userTracks = tracksGroupedByUser[user]
+      const [track] = userTracks
+      if (track) {
+        console.log(i, user, track.details.name)
+        const playlistDetails = await getPlaylistDetails(playlistId)
+        const { tracks } = playlistDetails
+        const findTrack = tracks.find(tr => tr.details.id === track.details.id)
+        const trackIndex = tracks.indexOf(findTrack)
+        const url = `${SPOTIFY_API_PREFIX}/playlists/${playlistId}/tracks`
+        await axios.put(url, {
+          range_start: trackIndex,
+          range_length: 1,
+          insert_before: 0,
+        }, {
+          headers: generateHeaders()
+        }).catch((error) => {
+          if (error.response) {
+            console.log(error.response.data)
+          }
+        })
+        tracksGroupedByUser[user] = userTracks.slice(1, userTracks.length)
+      }
+    }
+  }
 }
 
 /**
@@ -192,14 +218,13 @@ app.post('/reorder', async (req, res) => {
       playlist => playlist.name.toUpperCase() === playlistName.toUpperCase()
     )
 
-    const playlistsDetails = await getPlaylistDetails(playlist.id)
-    const tracksGroupedByUser = getPlaylistTracksGroupedByUser(playlistsDetails)
-    console.log(tracksGroupedByUser)
-    // await reorderColaborativePlaylist(playlistsDetails, tracksGroupedByUser)
+    const playlistDetails = await getPlaylistDetails(playlist.id)
+    const tracksGroupedByUser = getPlaylistTracksGroupedByUser(playlistDetails)
+    await reorderColaborativePlaylist(playlistDetails.id, playlistDetails.tracks.length, tracksGroupedByUser)
+    console.log("Reorder finished!")
 
     res.status(200).json({
       ok: true,
-      playlistsDetails,
     })
   } catch (error) {
     res.status(500).json({
