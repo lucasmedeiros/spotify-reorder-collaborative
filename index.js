@@ -37,7 +37,9 @@ function generateHeaders() {
   }
 }
 
-// Get the authorization link with the scopes.
+/**
+ * Returns the request authorization link.
+ */
 app.get('/', async (_req, res) => {
   const queryObject = {
     client_id: CLIENT_ID,
@@ -51,7 +53,9 @@ app.get('/', async (_req, res) => {
   })
 })
 
-// Callback route for getting get the token.
+/**
+ * Callback route for getting get the token.
+ */
 app.get('/auth/callback', async (req, res) => {
   const { code } = req.query
   const body = {
@@ -74,7 +78,9 @@ app.get('/auth/callback', async (req, res) => {
   }
 })
 
-// Refresh user token when it becomes invalid.
+/**
+ * Refresh user token when it becomes invalid.
+ */
 app.post('/auth/refresh', async (req, res) => {
   const { refresh_token } = req.body
   if (!refresh_token) {
@@ -102,6 +108,71 @@ app.post('/auth/refresh', async (req, res) => {
   }
 })
 
+/**
+ * Get all colaborative playlists of an user.
+ * 
+ * @returns {object} all user's colaborative playlists.
+ */
+async function getUserColaborativePlaylists() {
+  const response = await axios.get(`${SPOTIFY_API_PREFIX}/me/playlists?limit=50`, {
+    headers: generateHeaders()
+  })
+
+  return response.data.items.filter(playlist => playlist.collaborative)
+}
+
+/**
+ * Get one playlist's details, given its id.
+ * 
+ * @param {string} playlistId the playlist id.
+ * @returns {object} the playlist details.
+ */
+async function getPlaylistDetails(playlistId) {
+  const response = await axios.get(`${SPOTIFY_API_PREFIX}/playlists/${playlistId}`, {
+    headers: generateHeaders()
+  })
+
+  return {
+    id: response.data.id,
+    snapshotId: response.data.snapshot_id,
+    name: response.data.name,
+    tracks: response.data.tracks.items.map((track, index) => ({
+      user: track.added_by.id,
+      index,
+      details: {
+        id: track.track.id,
+        name: track.track.name,
+        uri: track.track.uri,
+      }
+    }))
+  }
+}
+
+/**
+ * Get the tracks grouped by user.
+ * 
+ * @param {object} playlistDetails the playlist details.
+ * @returns {object} an object where the keys are the users ids and the values are the tracks added by one user.
+ */
+function getPlaylistTracksGroupedByUser(playlistDetails) {
+  return playlistDetails.tracks.reduce((cumulativeTracks, track) => {
+    const userTracks = cumulativeTracks[track.user]
+    return {
+      ...cumulativeTracks,
+      [track.user]: userTracks
+        ? [...userTracks, track]
+        : [track]
+    }
+  }, {})
+}
+
+async function reorderColaborativePlaylist(playlistDetails, tracksGroupedByUser) {
+  // TODO: reorder
+}
+
+/**
+ * Reorder a collaborative playlist alternately by its contributors.
+ */
 app.post('/reorder', async (req, res) => {
   const { playlistName } = req.body
   if (!data.access_token) {
@@ -110,48 +181,25 @@ app.post('/reorder', async (req, res) => {
     })
   }
   if (!playlistName) {
-    return res.status(401).json({
+    return res.status(400).json({
       error: 'playlistName is required on request body'
     })
   }
   try {
-    const response = await axios.get(`${SPOTIFY_API_PREFIX}/me/playlists?limit=50`, {
-      headers: generateHeaders()
-    })
+    const collaborativePlaylists = await getUserColaborativePlaylists()
 
-    const collaborativePlaylists = response.data.items.filter(
-      playlist => (
-        playlist.collaborative
-        && playlist.name.toUpperCase() === playlistName.toUpperCase()
-      )
+    const playlist = collaborativePlaylists.find(
+      playlist => playlist.name.toUpperCase() === playlistName.toUpperCase()
     )
 
-    const [playlist] = collaborativePlaylists
-
-    const detailsResponse = await axios.get(`${SPOTIFY_API_PREFIX}/playlists/${playlist.id}`, {
-      headers: generateHeaders()
-    })
-
-    const { data } = detailsResponse
-    const playlistsDetails = {
-      id: data.id,
-      name: data.name,
-      tracks: data.tracks
-    }
-
-    const tracks = playlistsDetails.tracks.items.map(track => ({
-      user: track.added_by,
-      details: {
-        id: track.track.id,
-        name: track.track.name,
-      }
-    }))
-
-    console.log(playlistsDetails)
+    const playlistsDetails = await getPlaylistDetails(playlist.id)
+    const tracksGroupedByUser = getPlaylistTracksGroupedByUser(playlistsDetails)
+    console.log(tracksGroupedByUser)
+    // await reorderColaborativePlaylist(playlistsDetails, tracksGroupedByUser)
 
     res.status(200).json({
       ok: true,
-      tracks,
+      playlistsDetails,
     })
   } catch (error) {
     res.status(500).json({
