@@ -1,0 +1,71 @@
+html {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body {
+    background-color: #181818;
+    /* height: 100vh; */
+}
+
+main {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+h1 {
+    color: white;
+}
+
+.img-section {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    justify-content: space-around;
+    align-items: flex-start;
+    margin-top: 1rem;
+    margin-bottom: 2rem;
+    background-color: 'red';
+}
+
+.img-container {
+    color: white;
+    text-transform: uppercase;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background-color: #1db954;
+}
+
+.img-container img {
+    max-width: 40rem;
+}
+
+.btn-spotify {
+    padding: 1rem;
+    background-color: #1db954;
+    appearance: none;
+    border: none;
+    color: #fff;
+    text-transform: uppercase;
+    font-weight: bolder;
+    transition: all ease-in-out .2s;
+    text-decoration: none;
+}
+
+.btn-spotify:hover {
+    cursor: pointer;
+    background-color: #1ed760;   
+}
+
+@media (min-width: 1200px) {
+    .img-section {
+        flex-direction: row;
+    }
+
+    .img-container {
+        margin-top: 1rem;
+    }
+}

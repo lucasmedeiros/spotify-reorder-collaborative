@@ -48,6 +48,6 @@ Então, a aplicação vai rodar no endereço `localhost:5000`. Para autorizar a 
 
 ![url](https://i.imgur.com/X6S8Y1l.png)
 
-Finalmente, faça uma requição HTTP para `POST http://localhost:5000/reorder`, passando como corpo da requisição o nome da playlist colaborativa que você deseja ordenar alternadamente entre os contribuidores. Dentro de alguns segundos, sua playlist estará ordenada!
+Finalmente, faça uma requição HTTP para `POST http://localhost:5000/reorder`, passando como corpo da requisição o nome da playlist `playlistName` que você deseja ordenar. Dentro de alguns segundos, sua playlist colaborativa estará ordenada!
 
 ![reorder](https://i.imgur.com/jNsR3bH.png)

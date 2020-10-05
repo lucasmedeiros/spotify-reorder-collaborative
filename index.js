@@ -7,13 +7,13 @@ const querystring = require('query-string')
 
 const CLIENT_ID = process.env.CLIENT_ID
 const CLIENT_SECRET = process.env.CLIENT_SECRET
-const REDIRECT_URI = 'http://localhost:5000/auth/callback'
+const PORT = process.env.PORT ?? 5000
+const REDIRECT_URI = process.env.REDIRECT_URI ?? `http://localhost:${PORT}/auth/callback`
 const SPOTIFY_ACCOUNT_API_PREFIX = 'https://accounts.spotify.com'
 const SPOTIFY_API_PREFIX = 'https://api.spotify.com/v1'
 
 let data = {
   access_token: null,
-  token_type: 'Bearer',
   expires_in: 0,
   refresh_token: null,
   scope: null
@@ -23,7 +23,7 @@ const app = express()
 app.use(cors())
 app.use(bodyParser.urlencoded({ extended: true }))
 
-function generateAuthHeaders() {
+function getAuthHeaders() {
   const base64ClientSecrets = Buffer.from(`${CLIENT_ID}:${CLIENT_SECRET}`).toString('base64')
   return {
     'Content-Type': 'application/x-www-form-urlencoded',
@@ -31,7 +31,7 @@ function generateAuthHeaders() {
   }
 }
 
-function generateHeaders() {
+function getHeaders() {
   return {
     Authorization: `Bearer ${data.access_token}`
   }
@@ -67,7 +67,7 @@ app.get('/auth/callback', async (req, res) => {
     const response = await axios.post(`${SPOTIFY_ACCOUNT_API_PREFIX}/api/token`,
       querystring.stringify(body),
       {
-        headers: generateAuthHeaders(),
+        headers: getAuthHeaders(),
       })
     data = response.data
     res.status(200).json({ ok: true, message: "Now you can use the /reorder route" })
@@ -97,7 +97,7 @@ app.post('/auth/refresh', async (req, res) => {
     const response = await axios.post(`${SPOTIFY_ACCOUNT_API_PREFIX}/api/token`,
       querystring.stringify(body),
       {
-        headers: generateAuthHeaders(),
+        headers: getAuthHeaders(),
       })
     data = response.data
     res.status(200).json({ ok: true })
@@ -113,9 +113,9 @@ app.post('/auth/refresh', async (req, res) => {
  * 
  * @returns {object} all user's colaborative playlists.
  */
-async function getUserColaborativePlaylists() {
+async function getUserCollaborativePlaylists() {
   const response = await axios.get(`${SPOTIFY_API_PREFIX}/me/playlists?limit=50`, {
-    headers: generateHeaders()
+    headers: getHeaders()
   })
 
   return response.data.items.filter(playlist => playlist.collaborative)
@@ -128,15 +128,15 @@ async function getUserColaborativePlaylists() {
  * @returns {object} the playlist details.
  */
 async function getPlaylistDetails(playlistId) {
-  const response = await axios.get(`${SPOTIFY_API_PREFIX}/playlists/${playlistId}`, {
-    headers: generateHeaders()
+  const { data } = await axios.get(`${SPOTIFY_API_PREFIX}/playlists/${playlistId}`, {
+    headers: getHeaders()
   })
 
   return {
-    id: response.data.id,
-    snapshotId: response.data.snapshot_id,
-    name: response.data.name,
-    tracks: response.data.tracks.items.map((track, index) => ({
+    id: data.id,
+    snapshotId: data.snapshot_id,
+    name: data.name,
+    tracks: data.tracks.items.map((track, index) => ({
       user: track.added_by.id,
       index,
       details: {
@@ -156,12 +156,10 @@ async function getPlaylistDetails(playlistId) {
  */
 function getPlaylistTracksGroupedByUser(playlistDetails) {
   return playlistDetails.tracks.reduce((cumulativeTracks, track) => {
-    const userTracks = cumulativeTracks[track.user]
+    const userTracks = cumulativeTracks[track.user] || []
     return {
       ...cumulativeTracks,
-      [track.user]: userTracks
-        ? [...userTracks, track]
-        : [track]
+      [track.user]: [...userTracks, track]
     }
   }, {})
 }
@@ -182,9 +180,9 @@ async function reorderColaborativePlaylist(playlistId, numberOfTracks, tracksGro
         await axios.put(url, {
           range_start: trackIndex,
           range_length: 1,
-          insert_before: 0,
+          insert_before: numberOfTracks,
         }, {
-          headers: generateHeaders()
+          headers: getHeaders()
         }).catch((error) => {
           if (error.response) {
             console.log(error.response.data)
@@ -212,7 +210,7 @@ app.post('/reorder', async (req, res) => {
     })
   }
   try {
-    const collaborativePlaylists = await getUserColaborativePlaylists()
+    const collaborativePlaylists = await getUserCollaborativePlaylists()
 
     const playlist = collaborativePlaylists.find(
       playlist => playlist.name.toUpperCase() === playlistName.toUpperCase()
