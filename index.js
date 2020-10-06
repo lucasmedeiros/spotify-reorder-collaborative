@@ -7,8 +7,8 @@ const querystring = require('query-string')
 
 const CLIENT_ID = process.env.CLIENT_ID
 const CLIENT_SECRET = process.env.CLIENT_SECRET
-const PORT = process.env.PORT ?? 5000
-const REDIRECT_URI = process.env.REDIRECT_URI ?? `http://localhost:${PORT}/auth/callback`
+const PORT = process.env.PORT || 5000
+const REDIRECT_URI = process.env.REDIRECT_URI || `http://localhost:${PORT}/auth/callback`
 const SPOTIFY_ACCOUNT_API_PREFIX = 'https://accounts.spotify.com'
 const SPOTIFY_API_PREFIX = 'https://api.spotify.com/v1'
 
