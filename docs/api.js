@@ -5,7 +5,7 @@ const API_URL = 'http://localhost:5000'
 function generateHeaders() {
   const data = getFromLocalStorage('data')
 
-  const token = data?.token
+  const token = data?.access_token
 
   return {
     Authorization: token ? `Bearer ${token}` : undefined,

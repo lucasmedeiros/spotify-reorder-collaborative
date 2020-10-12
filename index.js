@@ -57,8 +57,6 @@ app.post('/auth/callback', async (req, res) => {
     redirect_uri: REDIRECT_URI,
   }
   try {
-    console.log("chegou")
-    console.log(req.body)
     const response = await axios.post(`${SPOTIFY_ACCOUNT_API_PREFIX}/api/token`,
       querystring.stringify(body),
       {
@@ -190,6 +188,31 @@ async function reorderColaborativePlaylist(playlistId, numberOfTracks, tracksGro
 }
 
 /**
+ * Route to get user colaborative playlists
+ */
+app.get('/playlists', async (req, res) => {
+  console.log('chegou')
+  const { authorization } = req.headers
+  if (!authorization) {
+    return res.status(403).json({ error: 'No credentials sent' });
+  }
+  const [, access_token] = authorization.split(' ')
+  const data = { access_token }
+  try {
+    console.log(data)
+    const collaborativePlaylists = await getUserCollaborativePlaylists(data)
+    res.status(200).json({
+      ok: true,
+      playlists: collaborativePlaylists,
+    })
+  } catch (error) {
+    res.status(500).json({
+      error: error.message
+    })
+  }
+})
+
+/**
  * Reorder a collaborative playlist alternately by its contributors.
  */
 app.post('/reorder', async (req, res) => {
@@ -198,8 +221,7 @@ app.post('/reorder', async (req, res) => {
     return res.status(403).json({ error: 'No credentials sent' });
   }
 
-  console.log(authorization)
-  const [access_token] = authorization.split(' ')
+  const [, access_token] = authorization.split(' ')
   const data = { access_token }
 
   const { playlistName } = req.body
