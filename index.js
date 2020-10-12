@@ -8,16 +8,9 @@ const querystring = require('query-string')
 const CLIENT_ID = process.env.CLIENT_ID
 const CLIENT_SECRET = process.env.CLIENT_SECRET
 const PORT = process.env.PORT || 5000
-const REDIRECT_URI = process.env.REDIRECT_URI || `http://localhost:${PORT}/auth/callback`
+const REDIRECT_URI = process.env.REDIRECT_URI || `http://localhost:5500/docs/callback/index.html`
 const SPOTIFY_ACCOUNT_API_PREFIX = 'https://accounts.spotify.com'
 const SPOTIFY_API_PREFIX = 'https://api.spotify.com/v1'
-
-let data = {
-  access_token: null,
-  expires_in: 0,
-  refresh_token: null,
-  scope: null
-}
 
 const app = express()
 app.use(cors())
@@ -31,7 +24,7 @@ function getAuthHeaders() {
   }
 }
 
-function getHeaders() {
+function getHeaders(data) {
   return {
     Authorization: `Bearer ${data.access_token}`
   }
@@ -56,22 +49,25 @@ app.get('/', async (_req, res) => {
 /**
  * Callback route for getting get the token.
  */
-app.get('/auth/callback', async (req, res) => {
-  const { code } = req.query
+app.post('/auth/callback', async (req, res) => {
+  const { code } = req.body
   const body = {
     code,
     grant_type: 'authorization_code',
     redirect_uri: REDIRECT_URI,
   }
   try {
+    console.log("chegou")
+    console.log(req.body)
     const response = await axios.post(`${SPOTIFY_ACCOUNT_API_PREFIX}/api/token`,
       querystring.stringify(body),
       {
         headers: getAuthHeaders(),
       })
-    data = response.data
-    res.status(200).json({ ok: true, message: "Now you can use the /reorder route" })
+    const { data } = response
+    res.status(200).json({ ok: true, data })
   } catch (error) {
+    console.log(error.message)
     res.status(500).json({
       error
     })
@@ -113,9 +109,9 @@ app.post('/auth/refresh', async (req, res) => {
  * 
  * @returns {object} all user's colaborative playlists.
  */
-async function getUserCollaborativePlaylists() {
+async function getUserCollaborativePlaylists(data) {
   const response = await axios.get(`${SPOTIFY_API_PREFIX}/me/playlists?limit=50`, {
-    headers: getHeaders()
+    headers: getHeaders(data)
   })
 
   return response.data.items.filter(playlist => playlist.collaborative)
@@ -127,16 +123,16 @@ async function getUserCollaborativePlaylists() {
  * @param {string} playlistId the playlist id.
  * @returns {object} the playlist details.
  */
-async function getPlaylistDetails(playlistId) {
-  const { data } = await axios.get(`${SPOTIFY_API_PREFIX}/playlists/${playlistId}`, {
-    headers: getHeaders()
+async function getPlaylistDetails(playlistId, data) {
+  const { data: responseData } = await axios.get(`${SPOTIFY_API_PREFIX}/playlists/${playlistId}`, {
+    headers: getHeaders(data)
   })
 
   return {
-    id: data.id,
-    snapshotId: data.snapshot_id,
-    name: data.name,
-    tracks: data.tracks.items.map((track, index) => ({
+    id: responseData.id,
+    snapshotId: responseData.snapshot_id,
+    name: responseData.name,
+    tracks: responseData.tracks.items.map((track, index) => ({
       user: track.added_by.id,
       index,
       details: {
@@ -164,8 +160,9 @@ function getPlaylistTracksGroupedByUser(playlistDetails) {
   }, {})
 }
 
-async function reorderColaborativePlaylist(playlistId, numberOfTracks, tracksGroupedByUser) {
+async function reorderColaborativePlaylist(playlistId, numberOfTracks, tracksGroupedByUser, data) {
   const users = Object.keys(tracksGroupedByUser)
+  const headers = getHeaders(data)
   for (let i = 0; i < (numberOfTracks / users.length); i++) {
     for (let user of users) {
       const userTracks = tracksGroupedByUser[user]
@@ -181,9 +178,7 @@ async function reorderColaborativePlaylist(playlistId, numberOfTracks, tracksGro
           range_start: trackIndex,
           range_length: 1,
           insert_before: numberOfTracks,
-        }, {
-          headers: getHeaders()
-        }).catch((error) => {
+        }, { headers }).catch((error) => {
           if (error.response) {
             console.log(error.response.data)
           }
@@ -198,6 +193,15 @@ async function reorderColaborativePlaylist(playlistId, numberOfTracks, tracksGro
  * Reorder a collaborative playlist alternately by its contributors.
  */
 app.post('/reorder', async (req, res) => {
+  const { authorization } = req.headers
+  if (!authorization) {
+    return res.status(403).json({ error: 'No credentials sent' });
+  }
+
+  console.log(authorization)
+  const [access_token] = authorization.split(' ')
+  const data = { access_token }
+
   const { playlistName } = req.body
   if (!data.access_token) {
     return res.status(401).json({
@@ -210,15 +214,15 @@ app.post('/reorder', async (req, res) => {
     })
   }
   try {
-    const collaborativePlaylists = await getUserCollaborativePlaylists()
+    const collaborativePlaylists = await getUserCollaborativePlaylists(data)
 
     const playlist = collaborativePlaylists.find(
       playlist => playlist.name.toUpperCase() === playlistName.toUpperCase()
     )
 
-    const playlistDetails = await getPlaylistDetails(playlist.id)
+    const playlistDetails = await getPlaylistDetails(playlist.id, data)
     const tracksGroupedByUser = getPlaylistTracksGroupedByUser(playlistDetails)
-    await reorderColaborativePlaylist(playlistDetails.id, playlistDetails.tracks.length, tracksGroupedByUser)
+    await reorderColaborativePlaylist(playlistDetails.id, playlistDetails.tracks.length, tracksGroupedByUser, data)
     console.log("Reorder finished!")
 
     res.status(200).json({
@@ -231,6 +235,6 @@ app.post('/reorder', async (req, res) => {
   }
 })
 
-app.listen(5000, () => {
-  console.log(`Server listening on port 5000`)
+app.listen(PORT, () => {
+  console.log(`Server listening on port ${PORT}`)
 })
