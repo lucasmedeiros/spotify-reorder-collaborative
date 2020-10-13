@@ -8,6 +8,6 @@ if (code) {
   request('POST', '/auth/callback', { code }).then(response => {
     const { data } = response
     saveInLocalStorage('data', data)
-    location.href = "https://lucasmedeiros.github.io/spotify-reorder-collaborative/docs/reorder"
+    location.href = "https://lucasmedeiros.github.io/spotify-reorder-collaborative/reorder"
   })
 }
