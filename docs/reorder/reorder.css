@@ -1,0 +1,68 @@
+html {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    height: 100%;
+}
+
+body {
+    background-color: #181818;
+    color: #f2f3f2;
+    font-weight: bold;
+    height: 100%;
+}
+
+.playlist-container {
+    padding:  1rem;
+    margin-bottom: 5px;
+    background-color: #1ed760;
+}
+
+.playlist-container button {
+    background-color: #1db954;
+    margin-top: 0.8rem;
+    color: white;
+    font-weight: bolder;
+    text-transform: uppercase;
+    padding: 0.8rem;
+    border: none;
+    cursor: pointer;
+    transition: all .2s ease-in-out;
+}
+
+.playlist-container button:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+    background-color: #189b46;
+}
+
+.playlist-container button:hover {
+    background-color: #189b46;
+}
+
+.reordering-overlay {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    right: 0;
+    left: 0;
+    background-color: #000;
+    opacity: 0.8;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+}
+
+.spinner {
+    border: 8px solid rgba(0, 0, 0, 0.1);
+    border-left-color: #fff;
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+to {
+    transform: rotate(360deg);
+}
+}

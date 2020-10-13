@@ -108,11 +108,14 @@ app.post('/auth/refresh', async (req, res) => {
  * @returns {object} all user's colaborative playlists.
  */
 async function getUserCollaborativePlaylists(data) {
+  const headers = getHeaders(data)
   const response = await axios.get(`${SPOTIFY_API_PREFIX}/me/playlists?limit=50`, {
-    headers: getHeaders(data)
+    headers
   })
+  const userResponse = await axios.get(`${SPOTIFY_API_PREFIX}/me`, { headers })
+  const userId = userResponse.data.id
 
-  return response.data.items.filter(playlist => playlist.collaborative)
+  return response.data.items.filter(playlist => playlist.collaborative && playlist.owner.id === userId)
 }
 
 /**
@@ -167,7 +170,7 @@ async function reorderColaborativePlaylist(playlistId, numberOfTracks, tracksGro
       const [track] = userTracks
       if (track) {
         console.log(i, user, track.details.name)
-        const playlistDetails = await getPlaylistDetails(playlistId)
+        const playlistDetails = await getPlaylistDetails(playlistId, data)
         const { tracks } = playlistDetails
         const findTrack = tracks.find(tr => tr.details.id === track.details.id)
         const trackIndex = tracks.indexOf(findTrack)
@@ -191,7 +194,6 @@ async function reorderColaborativePlaylist(playlistId, numberOfTracks, tracksGro
  * Route to get user colaborative playlists
  */
 app.get('/playlists', async (req, res) => {
-  console.log('chegou')
   const { authorization } = req.headers
   if (!authorization) {
     return res.status(403).json({ error: 'No credentials sent' });
@@ -199,7 +201,6 @@ app.get('/playlists', async (req, res) => {
   const [, access_token] = authorization.split(' ')
   const data = { access_token }
   try {
-    console.log(data)
     const collaborativePlaylists = await getUserCollaborativePlaylists(data)
     res.status(200).json({
       ok: true,
@@ -251,6 +252,7 @@ app.post('/reorder', async (req, res) => {
       ok: true,
     })
   } catch (error) {
+    console.log(error)
     res.status(500).json({
       error: error.message
     })
