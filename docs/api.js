@@ -1,6 +1,6 @@
 import { getFromLocalStorage } from './storage.js'
 
-const API_URL = 'http://localhost:5000'
+const API_URL = 'https://spotify-reorder.herokuapp.com'
 
 function generateHeaders() {
   const data = getFromLocalStorage('data')
