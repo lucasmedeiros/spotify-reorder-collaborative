@@ -115,7 +115,7 @@ async function getUserCollaborativePlaylists(data) {
   const userResponse = await axios.get(`${SPOTIFY_API_PREFIX}/me`, { headers })
   const userId = userResponse.data.id
 
-  return response.data.items.filter(playlist => playlist.collaborative && playlist.owner.id === userId)
+  return response.data.items.filter(playlist => playlist.owner.id === userId)
 }
 
 /**
